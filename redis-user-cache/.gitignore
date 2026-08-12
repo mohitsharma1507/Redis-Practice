@@ -1,0 +1,11 @@
+.env
+node_modules
+dist/
+/src/generated/prisma
+
+coverage
+
+.prisma
+
+postgres_data
+redis_data
