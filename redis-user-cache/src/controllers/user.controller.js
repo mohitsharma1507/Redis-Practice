@@ -42,3 +42,77 @@ export const createUser = async (req, res) => {
     res.status(500).json({ error: "Failed to create user" });
   }
 };
+
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const cacheKey = `user:${id}`;
+    const cachedUser = await redisClient.hGetAll(cacheKey);
+    if (Object.keys(cachedUser).length > 0) {
+      console.log("CACHE HIT");
+      return res.status(200).json({
+        source: "redis",
+        user: cachedUser,
+      });
+    }
+    console.log("CACHE MISS");
+    const user = await prisma.user.findUnique({
+      where: {
+        id: id,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+    await redisClient.hSet(cacheKey, {
+      id: user.id,
+      name: user.name ?? "",
+      email: user.email,
+      createdAt: user.createdAt.toISOString(),
+    });
+    await redisClient.expire(cacheKey, 60);
+    return res.status(200).json({
+      source: "database",
+      user,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Something went wrong",
+    });
+  }
+};
+
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email } = req.body;
+
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: id,
+      },
+      data: {
+        name,
+        email,
+      },
+    });
+    await redisClient.del(`user:${id}`);
+    console.log("User cache invalidated");
+
+    return res.status(200).json({
+      message: "User updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Something went wrong",
+    });
+  }
+};
