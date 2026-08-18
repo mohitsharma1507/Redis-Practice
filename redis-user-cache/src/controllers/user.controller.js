@@ -102,6 +102,7 @@ export const updateUser = async (req, res) => {
       },
     });
     await redisClient.del(`user:${id}`);
+    await redisClient.del("user:all");
     console.log("User cache invalidated");
 
     return res.status(200).json({

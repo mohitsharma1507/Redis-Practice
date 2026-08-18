@@ -19,7 +19,11 @@ A production-style backend project demonstrating Redis caching with PostgreSQL, 
 - Cache HIT and Cache MISS handling
 - TTL-based cache expiration
 - Cache invalidation after database writes
+- Individual user caching using Redis Hashes
+- Cache expiration using Redis TTL
 - Dockerized application, PostgreSQL, and Redis
+- Docker container networking
+- Environment-based configuration
 
 ## Architecture
 
@@ -59,7 +63,10 @@ Response         |
 | Method | Endpoint     | Description                        |
 | ------ | ------------ | ---------------------------------- |
 | GET    | `/api/users` | Get all users with Redis caching   |
+| GET    | `/api/users/:id` | Get a single users using Redis caching   |
 | POST   | `/api/users` | Create a user and invalidate cache |
+| PATCH  | `/api/users/:id` | Update a user and invalidate cache |
+| DELETE   | `/api/users/:id` | Delete a user and invalidate cache |
 
 ## Redis Commands Used
 
@@ -67,15 +74,19 @@ Response         |
 - `SET`
 - `DEL`
 - `TTL`
+- `EXPIRE`
 - `HSET`
 - `HGET`
 - `HGETALL`
+- `HEXISTS`
+- `HLEN`
 
 ## Key Concepts Demonstrated
 
 - Redis cache-aside pattern
 - Cache invalidation
 - TTL (Time To Live)
+- Redis Hashes
 - Docker container networking
 - Prisma ORM integration
 - PostgreSQL as the source of truth
