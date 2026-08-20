@@ -13,6 +13,18 @@ services:
     env_file:
       - .env
 
+  worker:
+    build: .
+    container_name: notification-worker
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    command: node src/workers/notification.worker.js
+
   postgres:
     image: postgres:17-alpine
     container_name: postgres-db
