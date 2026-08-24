@@ -16,6 +16,7 @@ export const createNotification = async (req, res) => {
       message,
       createdAt: new Date().toISOString(),
       attempts: 0,
+      maxAttempts: 3,
     };
     await redisClient.rPush("notification_queue", JSON.stringify(job));
 
