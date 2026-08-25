@@ -18,6 +18,13 @@ export const createNotification = async (req, res) => {
       attempts: 0,
       maxAttempts: 3,
     };
+
+    await redisClient.hSet(`notification:status:${job.id}`, {
+      status: "PENDING",
+      attempts: "0",
+      createdAt: job.createdAt,
+      updatedAt: job.createdAt,
+    });
     await redisClient.rPush("notification_queue", JSON.stringify(job));
 
     return res.status(202).json({
@@ -26,6 +33,28 @@ export const createNotification = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    return res.status(500).json({
+      message: "Something went wrong",
+    });
+  }
+};
+
+export const getNotificationStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const status = await redisClient.hGetAll(`notification.status:${id}`);
+    if (Object.keys(status).length === 0) {
+      return res.status(404).json({
+        message: "Job not Found",
+      });
+    }
+    return res.status(200).json({
+      jobId: id,
+      status,
+    });
+  } catch (error) {
+    console.error(error);
+
     return res.status(500).json({
       message: "Something went wrong",
     });

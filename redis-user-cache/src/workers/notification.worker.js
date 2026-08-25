@@ -25,7 +25,7 @@ const processNotification = async (job) => {
 const moveReadyRetriesToQueue = async () => {
   try {
     const now = Date.now();
-    const job = await redisClient.zRangeByScore(RETRY_QUEUE, 0, now);
+    const jobs = await redisClient.zRangeByScore(RETRY_QUEUE, 0, now);
     for (const job of jobs) {
       await redisClient.zRem(RETRY_QUEUE, job);
       await redisClient.rPush(QUEUE_NAME, job);
@@ -47,17 +47,42 @@ const startWorker = async () => {
       console.log("Notification received");
       console.log(job);
 
+      await redisClient.hSet(`notification:status:${job.id}`, {
+        status: "PROCESSING",
+        attempts: job.attempts.toString(),
+        updatedAt: new Date().toISOString(),
+      });
+
       try {
         await processNotification(job);
+
+        await redisClient.hSet(`notification:status:${job.id}`, {
+          status: "COMPLETED",
+          attempts: job.attempts.toString(),
+          updatedAt: new Date().toISOString(),
+        });
+
         console.log(`Job ${job.id} completed successfully`);
       } catch (error) {
         console.error(`Job ${job.id} failed`);
         job.attempts++;
         console.log(`Retry attempt: ${job.attempts}/${MAX_RETRIES}`);
 
+        await redisClient.hSet(`notification:status:${job.id}`, {
+          status: "FAILED",
+          attempts: job.attempts.toString(),
+          updatedAt: new Date().toISOString(),
+        });
+
         if (job.attempts < MAX_RETRIES) {
           const delay = getRetryDelay(job.attempts);
           const retryAt = Date.now() + delay;
+
+          await redisClient.hSet(`notification:status:${job.id}`, {
+            status: "RETRYING",
+            attempts: job.attempts.toString(),
+            updatedAt: new Date().toISOString(),
+          });
 
           await redisClient.zAdd(RETRY_QUEUE, {
             score: retryAt,
@@ -65,6 +90,11 @@ const startWorker = async () => {
           });
           console.log(`Job scheduled for retry ${delay}ms `);
         } else {
+          await redisClient.hSet(`notification:status:${job.id}`, {
+            status: "DEAD",
+            attempts: job.attempts.toString(),
+            updatedAt: new Date().toISOString(),
+          });
           await redisClient.rPush(FAILED_QUEUE, JSON.stringify(job));
 
           console.log("Job moved to DLQ");
