@@ -8,6 +8,6 @@ const message = {
 
 await redisClient.publish("notifications", JSON.stringify(message));
 
-console.log("Notification published");
+console.log("Notifications published");
 
 await redisClient.quit();
