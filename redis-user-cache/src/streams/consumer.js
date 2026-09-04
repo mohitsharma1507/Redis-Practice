@@ -1,12 +1,29 @@
 import redisClient from "../config/redis.js";
 
-const messages = await redisClient.xRead(
-  {
-    key: "notifications_stream",
-    id: "1788450319950-0",
-  },
-  {
-    COUNT: 10,
-  },
-);
-console.log(JSON.stringify(messages, null, 2));
+let lastID = "0";
+while (true) {
+  const messages = await redisClient.xRead(
+    {
+      key: "notifications_stream",
+      id: lastID,
+    },
+    {
+      COUNT: 10,
+      BLOCK: 5000,
+    },
+  );
+
+  if (!messages) {
+    console.log("No new messages, waiting...");
+    continue;
+  }
+
+  for (const stream of messages) {
+    for (const message of stream.messages) {
+      console.log("Message received:");
+      console.log(message);
+
+      lastID = message.id;
+    }
+  }
+}
