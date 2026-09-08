@@ -88,6 +88,6 @@ while (true) {
       }
     }
   } catch (err) {
-    console.error("Error auto-claiming messages:", err);
+    console.error("Errors auto-claiming messages:", err);
   }
 }
